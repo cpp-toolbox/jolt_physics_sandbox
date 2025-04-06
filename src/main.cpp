@@ -1,5 +1,11 @@
+#include "utility/texture_packer_model_loading/texture_packer_model_loading.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image.h>
+#include <stb_image_write.h>
 
 #include "graphics/draw_info/draw_info.hpp"
 #include "input/glfw_lambda_callback_manager/glfw_lambda_callback_manager.hpp"
@@ -7,16 +13,23 @@
 
 #include "utility/fixed_frequency_loop/fixed_frequency_loop.hpp"
 
+#include "physics/physics.hpp"
+
 #include "graphics/vertex_geometry/vertex_geometry.hpp"
 #include "graphics/shader_standard/shader_standard.hpp"
+#include "graphics/texture_packer/texture_packer.hpp"
 #include "graphics/batcher/generated/batcher.hpp"
 #include "graphics/shader_cache/shader_cache.hpp"
 #include "graphics/fps_camera/fps_camera.hpp"
 #include "graphics/window/window.hpp"
 #include "graphics/colors/colors.hpp"
+
+#include "utility/resource_path/resource_path.hpp"
 #include "utility/unique_id_generator/unique_id_generator.hpp"
+#include "utility/jolt_glm_type_conversions/jolt_glm_type_conversions.hpp"
 
 #include <iostream>
+#include <filesystem>
 
 int main() {
     Colors colors;
@@ -32,13 +45,35 @@ int main() {
     window.initialize_glfw_glad_and_return_window(window_width_px, window_height_px, "catmullrom camera interpolation",
                                                   start_in_fullscreen, start_with_mouse_captured, vsync);
 
+    const auto textures_directory = std::filesystem::path("assets");
+    std::filesystem::path output_dir = std::filesystem::path("assets") / "packed_textures";
+    int container_side_length = 1024;
+
     InputState input_state;
 
-    std::vector<ShaderType> requested_shaders = {ShaderType::CWL_V_TRANSFORMATION_UBOS_1024_WITH_SOLID_COLOR};
+    std::vector<ShaderType> requested_shaders = {ShaderType::TEXTURE_PACKER_CWL_V_TRANSFORMATION_UBOS_1024,
+                                                 ShaderType::CWL_V_TRANSFORMATION_UBOS_1024_WITH_SOLID_COLOR};
     ShaderCache shader_cache(requested_shaders);
     Batcher batcher(shader_cache);
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe mode
+    TexturePacker texture_packer(textures_directory, output_dir, container_side_length);
+    shader_cache.set_uniform(ShaderType::TEXTURE_PACKER_CWL_V_TRANSFORMATION_UBOS_1024,
+                             ShaderUniformVariable::PACKED_TEXTURE_BOUNDING_BOXES, 1);
+
+    Physics physics;
+
+    ResourcePath rp(false);
+
+    auto map = texture_packer_model_loading::parse_model_into_tig(
+        rp, "assets/map.obj", texture_packer,
+        batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.object_id_generator,
+        batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.ltw_object_id_generator);
+
+    physics.load_model_into_physics_world(draw_info::extract_indexed_vertex_positions_vector(map.ivptps));
+
+    auto physics_character = physics.create_character(0, JPH::Vec3(0, 10, 0));
+
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // wireframe mode
     shader_cache.set_uniform(ShaderType::CWL_V_TRANSFORMATION_UBOS_1024_WITH_SOLID_COLOR,
                              ShaderUniformVariable::RGBA_COLOR, glm::vec4(colors.cyan, 1));
 
@@ -64,19 +99,9 @@ int main() {
                              ShaderUniformVariable::CAMERA_TO_CLIP,
                              fps_camera.get_projection_matrix(window_width_px, window_height_px));
 
-    GLuint ltw_matrices_gl_name;
-    BoundedUniqueIDGenerator ltw_id_generator(1024);
-    glm::mat4 ltw_matrices[1024];
-
-    // initialize all matrices to identity matrices
-    for (int i = 0; i < 1024; ++i) {
-        ltw_matrices[i] = identity;
-    }
-
-    glGenBuffers(1, &ltw_matrices_gl_name);
-    glBindBuffer(GL_UNIFORM_BUFFER, ltw_matrices_gl_name);
-    glBufferData(GL_UNIFORM_BUFFER, sizeof(ltw_matrices), ltw_matrices, GL_STATIC_DRAW);
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, ltw_matrices_gl_name);
+    shader_cache.set_uniform(ShaderType::TEXTURE_PACKER_CWL_V_TRANSFORMATION_UBOS_1024,
+                             ShaderUniformVariable::CAMERA_TO_CLIP,
+                             fps_camera.get_projection_matrix(window_width_px, window_height_px));
 
     std::function<void(double)> tick = [&](double dt) {
         /*glfwGetFramebufferSize(window, &width, &height);*/
@@ -93,17 +118,24 @@ int main() {
         shader_cache.set_uniform(ShaderType::CWL_V_TRANSFORMATION_UBOS_1024_WITH_SOLID_COLOR,
                                  ShaderUniformVariable::WORLD_TO_CAMERA, fps_camera.get_view_matrix());
 
+        shader_cache.set_uniform(ShaderType::TEXTURE_PACKER_CWL_V_TRANSFORMATION_UBOS_1024,
+                                 ShaderUniformVariable::WORLD_TO_CAMERA, fps_camera.get_view_matrix());
+
         std::vector<unsigned int> ltw_indices(ball.xyz_positions.size(), 0);
-        batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.queue_draw(
-            0, ball.indices, ball.xyz_positions, ltw_indices);
+        // batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.queue_draw(
+        //     0, ball.indices, ball.xyz_positions, ltw_indices);
 
-        ltw_matrices[0] = ball_transform.get_transform_matrix();
+        // batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.draw_everything();
+        // batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.upload_ltw_matrices();
 
-        batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.draw_everything();
+        physics.update_characters_only(dt);
 
-        glBindBuffer(GL_UNIFORM_BUFFER, ltw_matrices_gl_name);
-        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(ltw_matrices), ltw_matrices);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        fps_camera.transform.set_translation(j2g(physics_character->GetPosition()));
+
+        batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.queue_draw(map);
+
+        batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.upload_ltw_matrices();
+        batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.draw_everything();
 
         glfwSwapBuffers(window.glfw_window);
         glfwPollEvents();

@@ -61,3 +61,36 @@
 [submodule "src/graphics/colors"]
 	path = src/graphics/colors
 	url = git@github.com:cpp-toolbox/colors.git
+[submodule "src/physics"]
+	path = src/physics
+	url = git@github.com:cpp-toolbox/physics.git
+[submodule "src/graphics/texture_packer"]
+	path = src/graphics/texture_packer
+	url = git@github.com:cpp-toolbox/texture_packer.git
+[submodule "src/utility/fs_utils"]
+	path = src/utility/fs_utils
+	url = git@github.com:cpp-toolbox/fs_utils.git
+[submodule "src/utility/model_loading"]
+	path = src/utility/model_loading
+	url = git@github.com:cpp-toolbox/model_loading.git
+[submodule "src/utility/texture_packer_model_loading"]
+	path = src/utility/texture_packer_model_loading
+	url = git@github.com:cpp-toolbox/texture_packer_model_loading.git
+[submodule "src/utility/rigged_model_loading"]
+	path = src/utility/rigged_model_loading
+	url = git@github.com:cpp-toolbox/rigged_model_loading.git
+[submodule "src/utility/resource_path"]
+	path = src/utility/resource_path
+	url = git@github.com:cpp-toolbox/resource_path.git
+[submodule "src/utility/print_utils"]
+	path = src/utility/print_utils
+	url = git@github.com:cpp-toolbox/print_utils.git
+[submodule "src/utility/jolt_glm_type_conversions"]
+	path = src/utility/jolt_glm_type_conversions
+	url = git@github.com:cpp-toolbox/jolt_glm_type_conversions.git
+[submodule "src/utility/turns"]
+	path = src/utility/turns
+	url = git@github.com:cpp-toolbox/turns.git
+[submodule "src/glm_printing"]
+	path = src/glm_printing
+	url = git@github.com:cpp-toolbox/glm_printing.git
