@@ -60,18 +60,18 @@ int main() {
                                                  ShaderType::CWL_V_TRANSFORMATION_UBOS_1024_WITH_SOLID_COLOR,
                                                  ShaderType::CW_V_TRANSFORMATION_WITH_COLORED_VERTEX};
 
+    Physics physics;
+
     ShaderCache shader_cache(requested_shaders);
     Batcher batcher(shader_cache);
     CW_V_TransformationWithColoredVertexShaderRenderer ctwcvsr(shader_cache);
 
     // https://github.com/jrouwe/JoltPhysics/discussions/964
-    // PhysicsDebugRenderer physics_debug_renderer(ctwcvsr);
+    PhysicsDebugRenderer physics_debug_renderer(ctwcvsr);
 
     TexturePacker texture_packer(textures_directory, output_dir, container_side_length);
     shader_cache.set_uniform(ShaderType::TEXTURE_PACKER_CWL_V_TRANSFORMATION_UBOS_1024,
                              ShaderUniformVariable::PACKED_TEXTURE_BOUNDING_BOXES, 1);
-
-    Physics physics;
 
     ResourcePath rp(false);
 
@@ -159,7 +159,7 @@ int main() {
         batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.draw_everything();
 
         JPH::BodyManager::DrawSettings draw_settings;
-        // physics.physics_system.DrawBodies(draw_settings, &physics_debug_renderer);
+        physics.physics_system.DrawBodies(draw_settings, &physics_debug_renderer);
 
         glfwSwapBuffers(window.glfw_window);
         glfwPollEvents();
