@@ -15,6 +15,8 @@ ${PROJECT_BINARY_DIR}/assets
 COMMENT "Copying resources into binary directory")
 add_dependencies(${PROJECT_NAME} copy_resources)
 
+add_definitions(-DJPH_DEBUG_RENDERER)
+
 find_package(glfw3)
 find_package(glad)
 find_package(spdlog)

@@ -1,3 +1,5 @@
+#include "graphics/physics_debug_renderer/physics_debug_renderer.hpp"
+#include "graphics/renderer/renderer.hpp"
 #include "utility/texture_packer_model_loading/texture_packer_model_loading.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -13,6 +15,7 @@
 
 #include "utility/fixed_frequency_loop/fixed_frequency_loop.hpp"
 
+#define JPH_DEBUG_RENDERER
 #include "physics/physics.hpp"
 
 #include "graphics/vertex_geometry/vertex_geometry.hpp"
@@ -32,6 +35,8 @@
 #include <filesystem>
 
 int main() {
+
+    std::cout << "1" << std::endl;
     Colors colors;
 
     FPSCamera fps_camera;
@@ -52,9 +57,15 @@ int main() {
     InputState input_state;
 
     std::vector<ShaderType> requested_shaders = {ShaderType::TEXTURE_PACKER_CWL_V_TRANSFORMATION_UBOS_1024,
-                                                 ShaderType::CWL_V_TRANSFORMATION_UBOS_1024_WITH_SOLID_COLOR};
+                                                 ShaderType::CWL_V_TRANSFORMATION_UBOS_1024_WITH_SOLID_COLOR,
+                                                 ShaderType::CW_V_TRANSFORMATION_WITH_COLORED_VERTEX};
+
     ShaderCache shader_cache(requested_shaders);
     Batcher batcher(shader_cache);
+    CW_V_TransformationWithColoredVertexShaderRenderer ctwcvsr(shader_cache);
+
+    // https://github.com/jrouwe/JoltPhysics/discussions/964
+    // PhysicsDebugRenderer physics_debug_renderer(ctwcvsr);
 
     TexturePacker texture_packer(textures_directory, output_dir, container_side_length);
     shader_cache.set_uniform(ShaderType::TEXTURE_PACKER_CWL_V_TRANSFORMATION_UBOS_1024,
@@ -95,8 +106,12 @@ int main() {
     Transform ball_transform;
 
     glm::mat4 identity = glm::mat4(1);
+
     shader_cache.set_uniform(ShaderType::CWL_V_TRANSFORMATION_UBOS_1024_WITH_SOLID_COLOR,
                              ShaderUniformVariable::CAMERA_TO_CLIP,
+                             fps_camera.get_projection_matrix(window_width_px, window_height_px));
+
+    shader_cache.set_uniform(ShaderType::CW_V_TRANSFORMATION_WITH_COLORED_VERTEX, ShaderUniformVariable::CAMERA_TO_CLIP,
                              fps_camera.get_projection_matrix(window_width_px, window_height_px));
 
     shader_cache.set_uniform(ShaderType::TEXTURE_PACKER_CWL_V_TRANSFORMATION_UBOS_1024,
@@ -118,24 +133,33 @@ int main() {
         shader_cache.set_uniform(ShaderType::CWL_V_TRANSFORMATION_UBOS_1024_WITH_SOLID_COLOR,
                                  ShaderUniformVariable::WORLD_TO_CAMERA, fps_camera.get_view_matrix());
 
+        shader_cache.set_uniform(ShaderType::CW_V_TRANSFORMATION_WITH_COLORED_VERTEX,
+                                 ShaderUniformVariable::WORLD_TO_CAMERA, fps_camera.get_view_matrix());
+
         shader_cache.set_uniform(ShaderType::TEXTURE_PACKER_CWL_V_TRANSFORMATION_UBOS_1024,
                                  ShaderUniformVariable::WORLD_TO_CAMERA, fps_camera.get_view_matrix());
 
         std::vector<unsigned int> ltw_indices(ball.xyz_positions.size(), 0);
-        // batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.queue_draw(
-        //     0, ball.indices, ball.xyz_positions, ltw_indices);
 
-        // batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.draw_everything();
-        // batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.upload_ltw_matrices();
+        batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.queue_draw(
+            0, ball.indices, ball.xyz_positions, ltw_indices);
+
+        batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.draw_everything();
+        batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.upload_ltw_matrices();
 
         physics.update_characters_only(dt);
 
-        fps_camera.transform.set_translation(j2g(physics_character->GetPosition()));
+        batcher.cw_v_transformation_with_colored_vertex_shader_batcher.draw_everything();
+
+        // fps_camera.transform.set_translation(j2g(physics_character->GetPosition()));
 
         batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.queue_draw(map);
 
         batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.upload_ltw_matrices();
         batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.draw_everything();
+
+        JPH::BodyManager::DrawSettings draw_settings;
+        // physics.physics_system.DrawBodies(draw_settings, &physics_debug_renderer);
 
         glfwSwapBuffers(window.glfw_window);
         glfwPollEvents();
