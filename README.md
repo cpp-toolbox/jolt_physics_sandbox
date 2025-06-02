@@ -12,3 +12,8 @@ This project uses conan to install the required libraries, In order to configure
 ...
 joltphysics/*:tools.cmake.cmaketoolchain:extra_variables={"DEBUG_RENDERER_IN_DEBUG_AND_RELEASE": "ON", "CPP_RTTI_ENABLED": "ON"}
 ```
+
+If you've already built jolt, then the above configuration won't come into play immediately instead you must rebuild it like this:
+```
+conan install . --build="joltphysics/*"
+```
