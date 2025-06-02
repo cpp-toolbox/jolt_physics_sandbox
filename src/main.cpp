@@ -15,7 +15,6 @@
 
 #include "utility/fixed_frequency_loop/fixed_frequency_loop.hpp"
 
-#define JPH_DEBUG_RENDERER
 #include "physics/physics.hpp"
 
 #include "graphics/vertex_geometry/vertex_geometry.hpp"
@@ -42,7 +41,7 @@ int main() {
     FPSCamera fps_camera;
 
     unsigned int window_width_px = 700, window_height_px = 700;
-    bool start_in_fullscreen = false;
+    bool start_in_fullscreen = true;
     bool start_with_mouse_captured = true;
     bool vsync = false;
 
@@ -103,7 +102,8 @@ int main() {
                                    mouse_button_callback, frame_buffer_size_callback);
 
     auto ball = vertex_geometry::generate_icosphere(3, 1);
-    Transform ball_transform;
+
+    physics.add_shape_via_convex_hull(ball.xyz_positions);
 
     glm::mat4 identity = glm::mat4(1);
 
@@ -121,7 +121,7 @@ int main() {
     std::function<void(double)> tick = [&](double dt) {
         /*glfwGetFramebufferSize(window, &width, &height);*/
 
-        glViewport(0, 0, window_width_px, window_width_px);
+        glViewport(0, 0, window_width_px, window_height_px);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -139,27 +139,21 @@ int main() {
         shader_cache.set_uniform(ShaderType::TEXTURE_PACKER_CWL_V_TRANSFORMATION_UBOS_1024,
                                  ShaderUniformVariable::WORLD_TO_CAMERA, fps_camera.get_view_matrix());
 
-        std::vector<unsigned int> ltw_indices(ball.xyz_positions.size(), 0);
-
-        batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.queue_draw(
-            0, ball.indices, ball.xyz_positions, ltw_indices);
-
-        batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.draw_everything();
-        batcher.cwl_v_transformation_ubos_1024_with_solid_color_shader_batcher.upload_ltw_matrices();
-
         physics.update_characters_only(dt);
-
-        batcher.cw_v_transformation_with_colored_vertex_shader_batcher.draw_everything();
+        physics.update(dt);
 
         // fps_camera.transform.set_translation(j2g(physics_character->GetPosition()));
 
-        batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.queue_draw(map);
+        // batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.queue_draw(map);
 
         batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.upload_ltw_matrices();
         batcher.texture_packer_cwl_v_transformation_ubos_1024_shader_batcher.draw_everything();
 
         JPH::BodyManager::DrawSettings draw_settings;
+        draw_settings.mDrawShapeWireframe = true;
         physics.physics_system.DrawBodies(draw_settings, &physics_debug_renderer);
+
+        ctwcvsr.draw_everything();
 
         glfwSwapBuffers(window.glfw_window);
         glfwPollEvents();
