@@ -94,3 +94,9 @@
 [submodule "src/glm_printing"]
 	path = src/glm_printing
 	url = git@github.com:cpp-toolbox/glm_printing.git
+[submodule "src/graphics/physics_debug_renderer"]
+	path = src/graphics/physics_debug_renderer
+	url = git@github.com:cpp-toolbox/physics_debug_renderer.git
+[submodule "src/graphics/direct_shader_renderer"]
+	path = src/graphics/direct_shader_renderer
+	url = git@github.com:cpp-toolbox/direct_shader_renderer.git

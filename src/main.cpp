@@ -1,5 +1,5 @@
 #include "graphics/physics_debug_renderer/physics_debug_renderer.hpp"
-#include "graphics/renderer/renderer.hpp"
+#include "graphics/direct_shader_renderer/direct_shader_renderer.hpp"
 #include "utility/texture_packer_model_loading/texture_packer_model_loading.hpp"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -35,7 +35,6 @@
 
 int main() {
 
-    std::cout << "1" << std::endl;
     Colors colors;
 
     FPSCamera fps_camera;
@@ -63,7 +62,7 @@ int main() {
 
     ShaderCache shader_cache(requested_shaders);
     Batcher batcher(shader_cache);
-    CW_V_TransformationWithColoredVertexShaderRenderer ctwcvsr(shader_cache);
+    CW_V_TransformationWithColoredVertexDirectShaderRenderer ctwcvsr(shader_cache);
 
     // https://github.com/jrouwe/JoltPhysics/discussions/964
     PhysicsDebugRenderer physics_debug_renderer(ctwcvsr);
