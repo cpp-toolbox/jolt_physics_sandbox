@@ -17,3 +17,8 @@ If you've already built jolt, then the above configuration won't come into play 
 ```
 conan install . --build="joltphysics/*"
 ```
+
+Additionally when you use something like conan for dependencies it pre-builds your libraries so that your client code can use it, when you use the above extra variables it means that the library is built with the following definition `JPH_DEBUG_RENDERER`, by default your client code will not have this defined and your program will not run due to jolt reporting mismatched defines, so make sure you add the following into your `CMakeLists.txt`:
+```
+add_definitions(-DJPH_DEBUG_RENDERER)
+```
